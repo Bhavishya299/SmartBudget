@@ -1,0 +1,57 @@
+# Render Blueprint for the SmartBudget backend.
+# Docs: https://render.com/docs/blueprint-spec
+#
+# Deploy with: Render Dashboard -> New -> Blueprint -> pick this repo.
+# Values marked "sync: false" are secrets you must fill in the Render dashboard.
+
+services:
+  - type: web
+    name: smartbudget-api
+    runtime: node
+    plan: free
+    rootDir: backend
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      # --- Database (Aiven MySQL) ---
+      # Paste your Aiven service URI, e.g.
+      # mysql://avnadmin:PASSWORD@mysql-xxxx.aivencloud.com:12345/defaultdb
+      - key: DATABASE_URL
+        sync: false
+      # Aiven requires SSL.
+      - key: DB_SSL
+        value: "true"
+
+      # --- Server ---
+      - key: NODE_ENV
+        value: production
+      - key: JWT_SECRET
+        generateValue: true
+
+      # --- Auth ---
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+
+      # --- WhatsApp Cloud API ---
+      - key: WHATSAPP_VERIFY_TOKEN
+        sync: false
+      - key: WHATSAPP_TOKEN
+        sync: false
+      - key: PHONE_NUMBER_ID
+        sync: false
+
+      # --- Email (optional) ---
+      - key: SMTP_HOST
+        sync: false
+      - key: SMTP_PORT
+        sync: false
+      - key: SMTP_USER
+        sync: false
+      - key: SMTP_PASS
+        sync: false
+      - key: FROM_NAME
+        value: Budget App
+      - key: FROM_EMAIL
+        sync: false

@@ -59,7 +59,11 @@ app.use('/api/goals', goalRoutes);
 // ✅ WhatsApp webhook
 app.use('/webhook', whatsappRoutes);
 
-// --- 3. Error handler (must be after routes) ---
+// --- 3. Health check (used by Render) ---
+app.get("/", (req, res) => res.status(200).send("SmartBudget API is running ✅"));
+app.get("/health", (req, res) => res.status(200).json({ status: "ok" }));
+
+// --- 4. Error handler (must be after routes) ---
 app.use(errorHandler);
 
 // --- 4. Database Connection & Server Start ---

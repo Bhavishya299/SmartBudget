@@ -4,15 +4,38 @@ require("dotenv").config();
 /**
  * MySQL connection.
  *
- * Preferred (works with PlanetScale, Clever Cloud, Railway, etc.):
+ * Preferred (works with Aiven, Clever Cloud, Railway, TiDB, etc.):
  *   DATABASE_URL=mysql://user:password@host:3306/dbname
  *
  * Local fallback (used when DATABASE_URL is not set):
  *   DB_HOST, DB_PORT, DB_NAME, DB_USER, DB_PASSWORD
  *
  * Set DB_SSL=true when your hosted provider requires SSL.
+ * If the connection string itself asks for SSL (e.g. ?ssl-mode=REQUIRED),
+ * it is detected automatically and the unknown param is stripped for mysql2.
  */
-const useSSL = String(process.env.DB_SSL).toLowerCase() === "true";
+let useSSL = String(process.env.DB_SSL).toLowerCase() === "true";
+let databaseUrl = process.env.DATABASE_URL;
+
+if (databaseUrl) {
+  try {
+    const parsed = new URL(databaseUrl);
+    const sslParam =
+      parsed.searchParams.get("ssl-mode") || parsed.searchParams.get("ssl");
+
+    if (sslParam && /required|verify|true/i.test(sslParam)) {
+      useSSL = true;
+    }
+
+    // mysql2 does not understand ssl-mode / sslaccept -> remove them.
+    parsed.searchParams.delete("ssl-mode");
+    parsed.searchParams.delete("sslaccept");
+
+    databaseUrl = parsed.toString();
+  } catch (_) {
+    // Leave the URL untouched if it cannot be parsed.
+  }
+}
 
 const commonOptions = {
   dialect: "mysql",
@@ -28,8 +51,8 @@ const commonOptions = {
   },
 };
 
-const sequelize = process.env.DATABASE_URL
-  ? new Sequelize(process.env.DATABASE_URL, commonOptions)
+const sequelize = databaseUrl
+  ? new Sequelize(databaseUrl, commonOptions)
   : new Sequelize(
       process.env.DB_NAME || "budget_app",
       process.env.DB_USER || "root",

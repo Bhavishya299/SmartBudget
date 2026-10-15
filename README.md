@@ -105,6 +105,7 @@ Frontend runs on `http://localhost:5173`, backend on `http://localhost:5000`.
 | Variable | Description |
 |---|---|
 | `VITE_GOOGLE_CLIENT_ID` | Same Google OAuth client ID |
+| `VITE_API_URL` | Backend base URL. Leave empty for local dev (`http://localhost:5000`). Set to your deployed backend in production. |
 
 ---
 
@@ -132,15 +133,40 @@ food 200
 
 ## ☁️ Deployment
 
-**Backend (Render / Railway / Fly.io)**
-- Build: `npm install` · Start: `npm start`
-- Set all `backend/.env` variables in the host's dashboard.
-- Point it at a MySQL database (Render does not offer MySQL — use Aiven, Clever Cloud,
-  Railway, TiDB Cloud, or a self-hosted MySQL) via `DATABASE_URL` + `DB_SSL=true`.
+The repo ships a **`render.yaml`** blueprint so the backend can be deployed in a few clicks.
 
-**Frontend (Vercel / Netlify)**
-- Build: `npm run build` · Output: `dist`
-- Set `VITE_GOOGLE_CLIENT_ID` (and the API base URL if it differs) in the dashboard.
+### 1. Create a free MySQL database (Aiven)
+1. Sign up at [aiven.io](https://aiven.io) and create a **MySQL** service (free plan).
+2. Wait for it to start, then copy the **Service URI**:
+   ```
+   mysql://avnadmin:PASSWORD@mysql-xxxx.aivencloud.com:12345/defaultdb?ssl-mode=REQUIRED
+   ```
+3. Under the service's **Allowed IP addresses**, add `0.0.0.0/0` (Render uses dynamic IPs).
+
+### 2. Deploy the backend (Render)
+1. Render Dashboard → **New → Blueprint** → connect this GitHub repo (`render.yaml`).
+2. Fill in the environment variables the blueprint marks as secrets:
+   - `DATABASE_URL` → the Aiven Service URI above
+   - `GOOGLE_CLIENT_ID`
+   - `WHATSAPP_VERIFY_TOKEN`, `WHATSAPP_TOKEN`, `PHONE_NUMBER_ID`
+   - (optional) `SMTP_*`
+3. Deploy. Render builds `backend/` and runs `npm start`; tables are auto-created on first boot.
+4. Note your URL, e.g. `https://smartbudget-api.onrender.com`.
+
+### 3. Deploy the frontend (Vercel / Netlify)
+- Build command: `npm run build` · Output directory: `dist`
+- Environment variables:
+  - `VITE_API_URL = https://smartbudget-api.onrender.com`
+  - `VITE_GOOGLE_CLIENT_ID = ...`
+
+### 4. Point Meta's webhook at the backend
+- Callback URL: `https://smartbudget-api.onrender.com/webhook`
+- Verify token: same as `WHATSAPP_VERIFY_TOKEN`
+- Subscribe to the `messages` field.
+
+> Render's **free** web services sleep after ~15 minutes of inactivity. The first WhatsApp
+> message after a sleep may be delayed while it wakes up (Meta retries), so for a
+> production-grade bot consider a paid instance.
 
 ---
 
