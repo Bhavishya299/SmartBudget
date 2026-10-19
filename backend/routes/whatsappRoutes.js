@@ -60,6 +60,7 @@ async function handleIncoming(req) {
   if (!message || message.type !== "text") {
     return; // ignore statuses / non-text
   }
+  const text = (message.text?.body || "").trim().toLowerCase();
 
   // 🔥 DUPLICATE PREVENTION
   global.processedMessages = global.processedMessages || new Set();
