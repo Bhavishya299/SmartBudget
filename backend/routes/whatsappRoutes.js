@@ -16,10 +16,10 @@ router.get("/", (req, res) => {
   const challenge = req.query["hub.challenge"];
 
   console.log("🔎 Webhook verify attempt:", {
-    mode,
-    tokenReceived: token,
-    tokenConfigured: VERIFY_TOKEN || "(empty)"
-  });
+  mode,
+  tokenReceived: Boolean(token),
+  tokenConfigured: Boolean(VERIFY_TOKEN)
+});
 
   if (mode === "subscribe" && VERIFY_TOKEN && token === VERIFY_TOKEN) {
     console.log("✅ Webhook verified");
@@ -66,21 +66,23 @@ async function handleIncoming(req) {
   if (global.processedMessages.has(message.id)) return;
   global.processedMessages.add(message.id);
 
-  const phoneRaw = String(message.from).replace(/\D/g, ""); // e.g. 919876543210
-  const last10 = phoneRaw.slice(-10);
-  const text = (message.text?.body || "").toLowerCase();
+ const phoneRaw = String(message.from || "").replace(/\D/g, "");
+const last10 = phoneRaw.slice(-10);
 
-  console.log("📩 Incoming from", phoneRaw, ":", text);
+if (last10.length !== 10) {
+  console.log("❌ Invalid WhatsApp sender number");
+  return;
+}
 
-  // =============================
-  // 🔹 FIND USER (tolerant of +91 / 91 / 0 prefixes)
-  // =============================
-  const orConditions = [{ phone: phoneRaw }, { phone: `+${phoneRaw}` }];
-  if (last10.length === 10) {
-    orConditions.push({ phone: { [Op.like]: `%${last10}` } });
-  }
+const orConditions = [
+  { phone: phoneRaw },
+  { phone: `+${phoneRaw}` },
+  { phone: { [Op.like]: `%${last10}` } }
+];
 
-  const user = await User.findOne({ where: { [Op.or]: orConditions } });
+const user = await User.findOne({
+  where: { [Op.or]: orConditions }
+});
 
   if (!user) {
     console.log(
@@ -145,7 +147,7 @@ async function handleIncoming(req) {
   // =============================
   // ❌ INVALID CASE
   // =============================
-  if (!amount) {
+  if (!Number.isSafeInteger(amount) || amount <= 0) {
     await sendReply(
       phoneRaw,
       `❌ Couldn't understand.
