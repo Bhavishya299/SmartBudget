@@ -71,7 +71,17 @@ await API.post("/api/users/register", {
         navigate("/dashboard");
       }
     } catch (err) {
-      setError(err.response?.data?.message || "Authentication failed");
+      // Distinguish a transport failure (backend asleep / offline / timeout)
+      // from a real credential rejection so the message isn't misleading.
+      if (!err.response) {
+        setError(
+          err.code === "ECONNABORTED" || err.code === "ETIMEDOUT"
+            ? "The server took too long to respond. It may be waking from sleep — please try again."
+            : "Cannot reach the server. Please check your connection and try again."
+        );
+      } else {
+        setError(err.response?.data?.message || "Authentication failed");
+      }
     } finally {
       setLoading(false);
     }
