@@ -167,10 +167,57 @@ The repo ships a **`render.yaml`** blueprint so the backend can be deployed in a
 4. Note your URL, e.g. `https://smartbudget-api.onrender.com`.
 
 ### 3. Deploy the frontend (Vercel / Netlify)
-- Build command: `npm run build` · Output directory: `dist`
-- Environment variables:
-  - `VITE_API_URL = https://smartbudget-api.onrender.com`
-  - `VITE_GOOGLE_CLIENT_ID = ...`
+
+**Vercel project settings**
+
+| Setting | Value |
+|---|---|
+| Root Directory | `frontend` |
+| Framework Preset | Vite |
+| Install Command | `npm install` |
+| Build Command | `npm run build` |
+| Output Directory | `dist` |
+
+Environment variables (Project → Settings → Environment Variables):
+
+- `VITE_API_URL = https://<your-backend>.onrender.com`
+- `VITE_GOOGLE_CLIENT_ID = ...`
+
+**Client-side routing (refresh / direct URLs).**
+
+`frontend/vercel.json` rewrites every unmatched path to `/index.html`, so refreshing
+`/dashboard`, opening `/transactions` directly, etc. loads the SPA instead of returning 404.
+If the Vercel project's **Root Directory** is the repository root instead of `frontend`, the
+root `vercel.json` supplies the same rewrite plus the monorepo install/build/output settings.
+
+The rewrite does **not** touch API traffic: the frontend calls the backend through the absolute
+`VITE_API_URL`, so no `/api/*` request is made to the Vercel domain.
+
+After editing `vercel.json` or environment variables, **redeploy** — Vercel does not apply
+config changes to existing deployments.
+
+**Verify in production**
+
+1. Open `https://<your-app>.vercel.app/dashboard` directly → the app loads (and redirects to `/`
+   when you are not logged in).
+2. Refresh that page → same result, no 404.
+3. DevTools → Network: the document is `200 text/html`; files under `/assets/*` are `200`
+   JavaScript/CSS.
+4. API requests go to `https://<your-backend>.onrender.com`, not the Vercel domain.
+
+**Local check**
+
+```bash
+cd frontend
+npm run build
+npm run preview
+# open http://localhost:4173/dashboard and refresh
+```
+
+`vite preview` applies the same SPA fallback as the Vercel rewrite.
+
+**Netlify** (if used instead): add `frontend/public/_redirects` containing
+`/*  /index.html  200` and set the publish directory to `dist`.
 
 ### 4. Point Meta's webhook at the backend
 - Callback URL: `https://smartbudget-api.onrender.com/webhook`
