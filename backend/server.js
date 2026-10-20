@@ -1,5 +1,6 @@
 const express = require('express');
 const cors = require('cors');
+const jwt = require('jsonwebtoken');
 require('dotenv').config();
 const { sequelize } = require('./models');
 const { errorHandler } = require('./middleware/errorMiddleware');
@@ -22,8 +23,26 @@ const app = express();
 const server = http.createServer(app);
 const io = new Server(server, {
     cors: {
-        origin: "*"
+        // Allows the deployed Vercel/Netlify frontend and local dev.
+        origin: "*",
+        methods: ["GET", "POST"]
     }
+});
+
+// Authenticate every socket with the same JWT used by the REST API.
+// The room a client may join is derived from the token, never trusted from input.
+io.use((socket, next) => {
+    const token = socket.handshake.auth?.token;
+    if (!token) return next(); // allow connection; it just won't receive private events
+
+    try {
+        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        socket.userId = decoded?.id ? String(decoded.id) : null;
+    } catch (_) {
+        // Invalid/expired token: connect anonymously rather than hanging.
+        socket.userId = null;
+    }
+    next();
 });
 
 
@@ -34,10 +53,20 @@ app.set("io", io);
 io.on("connection", (socket) => {
     console.log("🔌 User connected:", socket.id);
 
-    // 🔥 USER JOINS THEIR OWN ROOM
+    // Auto-join the authenticated user's room.
+    if (socket.userId) {
+        socket.join(socket.userId);
+        console.log("👤 User joined room:", socket.userId);
+    }
+
+    // Backwards-compatible explicit join, restricted to the authenticated user.
     socket.on("join", (userId) => {
-        console.log("👤 User joined room:", userId);
-        socket.join(userId);
+        const requested = userId ? String(userId) : null;
+        if (!requested || !socket.userId || requested !== socket.userId) {
+            return;
+        }
+        socket.join(requested);
+        console.log("👤 User re-joined room:", requested);
     });
 
     socket.on("disconnect", () => {

@@ -23,6 +23,7 @@ export default function Auth() {
       });
       localStorage.setItem("token", res.data.token);
       localStorage.setItem("user", JSON.stringify(res.data.user));
+      window.dispatchEvent(new Event("auth-changed"));
       navigate("/dashboard");
     } catch (err) {
       setError(err.response?.data?.message || "Google Authentication failed");
@@ -66,6 +67,7 @@ await API.post("/api/users/register", {
         });
         localStorage.setItem("token", res.data.token);
         localStorage.setItem("user", JSON.stringify(res.data.user));
+        window.dispatchEvent(new Event("auth-changed"));
         navigate("/dashboard");
       }
     } catch (err) {

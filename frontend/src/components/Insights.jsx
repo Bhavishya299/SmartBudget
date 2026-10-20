@@ -2,6 +2,7 @@ import { useEffect, useState, useMemo } from "react";
 import { getTransactions } from "../api/transactions";
 import { getInsightsData } from "../api/transactions";
 import { useSettings } from "../context/SettingsContext";
+import { useSocket } from "../context/SocketContext";
 import { predictNextMonthSpend, generateBudgetSuggestions, computeSavingsRateTrend } from "../utils/smartEngine";
 import {
   Lightbulb, TrendingUp, AlertCircle, Sparkles,
@@ -21,6 +22,7 @@ export default function Insights() {
   const [transactions, setTransactions] = useState([]);
   const [loading, setLoading] = useState(true);
   const { formatCurrency } = useSettings();
+  const { version } = useSocket();
 
   useEffect(() => {
     const fetchData = async () => {
@@ -38,7 +40,7 @@ export default function Insights() {
       }
     };
     fetchData();
-  }, []);
+  }, [version]);
 
   // Client-side smart analysis
   const { predictions, totalPredicted } = useMemo(() => predictNextMonthSpend(transactions), [transactions]);

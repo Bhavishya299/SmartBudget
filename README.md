@@ -18,6 +18,19 @@ and a **WhatsApp bot** that lets you log transactions by simply texting.
 
 ---
 
+## ⚡ Realtime Updates
+
+Transactions created anywhere — including via WhatsApp — appear instantly without a refresh.
+
+- The backend authenticates each Socket.IO connection with the same JWT as the REST API and
+  joins it to a private room named after the authenticated user's `id`.
+- When a transaction is created (REST or WhatsApp), the backend emits `newTransaction` to that room.
+- The frontend `SocketProvider` (`src/context/SocketContext.jsx`) connects to `VITE_API_URL`
+  (or `http://localhost:5000`), joins the room, and increments a `version` counter.
+  Pages (dashboard, transactions, charts, insights, monthly summary, subscriptions, profile)
+  refetch whenever `version` changes.
+- The socket disconnects on logout and reconnects on login; duplicate events are ignored by id.
+
 ## 🧱 Tech Stack
 
 | Layer     | Technology                                          |

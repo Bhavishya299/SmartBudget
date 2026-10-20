@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { addTransaction, getTransactions } from "../api/transactions";
 import { useNavigate } from "react-router-dom";
 import { useSettings } from "../context/SettingsContext";
+import { useSocket } from "../context/SocketContext";
 import { ArrowLeft, CheckCircle2, TrendingDown, TrendingUp } from "lucide-react";
 import toast from "react-hot-toast";
 import { detectAnomaly } from "../utils/smartEngine";
@@ -25,6 +26,7 @@ export default function AddTransaction() {
 
   const { currency } = useSettings();
   const navigate = useNavigate();
+  const { version } = useSocket();
 
   // Keyword dictionary for smart auto-categorizer
   const keywordMap = {
@@ -38,7 +40,7 @@ export default function AddTransaction() {
   // Fetch history for anomaly detection
   useEffect(() => {
     getTransactions().then(res => setHistory(res.data)).catch(() => {});
-  }, []);
+  }, [version]);
 
   // Smart Categorizer
   useEffect(() => {

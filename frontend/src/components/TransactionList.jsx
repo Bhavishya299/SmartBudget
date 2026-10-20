@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { getTransactions, deleteTransaction } from "../api/transactions";
 import { useSettings } from "../context/SettingsContext";
 import { useSearch } from "../context/SearchContext";
+import { useSocket } from "../context/SocketContext";
 import { ArrowLeft, Search, Filter, Trash2, TrendingDown, TrendingUp, Download, Calendar } from "lucide-react";
 import toast from "react-hot-toast";
 import EmptyState from "./EmptyState";
@@ -18,9 +19,10 @@ export default function TransactionList() {
   
   const navigate = useNavigate();
   const { formatCurrency } = useSettings();
+  const { version } = useSocket();
 
-  const fetchData = useCallback(async () => {
-    setLoading(true);
+  const fetchData = useCallback(async ({ silent = false } = {}) => {
+    if (!silent) setLoading(true);
     try {
       const res = await getTransactions();
       setTransactions(res.data);
@@ -34,6 +36,12 @@ export default function TransactionList() {
   useEffect(() => {
     fetchData();
   }, [fetchData]);
+
+  // Live refresh when a transaction arrives (e.g. from the WhatsApp bot).
+  useEffect(() => {
+    if (version === 0) return;
+    fetchData({ silent: true });
+  }, [version, fetchData]);
 
   const handleDelete = async (id) => {
     if (!window.confirm("Are you sure you want to delete this transaction?")) return;

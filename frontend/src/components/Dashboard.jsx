@@ -5,6 +5,7 @@ import { getTransactions, getStats } from "../api/transactions";
 import API from "../api/axios";
 import { useSettings } from "../context/SettingsContext";
 import { useSearch } from "../context/SearchContext";
+import { useSocket } from "../context/SocketContext";
 import { PlusCircle, TrendingUp, TrendingDown, Wallet, Activity, CalendarClock, HeartPulse } from "lucide-react";
 import { computeWeeklyDigest, computeHealthScore } from "../utils/smartEngine";
 
@@ -12,6 +13,7 @@ export default function Dashboard() {
   const navigate = useNavigate();
   const { formatCurrency } = useSettings();
   const { searchQuery } = useSearch();
+  const { version } = useSocket();
 
   const [transactions, setTransactions] = useState([]);
   const [stats, setStats] = useState({
@@ -25,6 +27,8 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    let cancelled = false;
+
     const fetchData = async () => {
       try {
         const [txRes, statsRes, goalsRes] = await Promise.all([ 
@@ -32,6 +36,7 @@ export default function Dashboard() {
           getStats(),
           API.get("/api/goals").catch(() => ({ data: [] }))
         ]);
+        if (cancelled) return;
         setTransactions(txRes.data.slice(0, 4));
         setStats(statsRes.data);
         setWeeklyDigest(computeWeeklyDigest(txRes.data));
@@ -39,11 +44,15 @@ export default function Dashboard() {
       } catch (err) {
         console.log(err);
       } finally {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       }
     };
     fetchData();
-  }, []);
+
+    return () => {
+      cancelled = true;
+    };
+  }, [version]);
 
   if (loading) {
     return (

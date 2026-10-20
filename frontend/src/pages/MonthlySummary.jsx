@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { getTransactions } from "../api/transactions";
 import { useSettings } from "../context/SettingsContext";
+import { useSocket } from "../context/SocketContext";
 import { Calendar, TrendingUp, TrendingDown, Wallet, CalendarDays, ArrowRight } from "lucide-react";
 import { motion } from "framer-motion";
 
@@ -14,6 +15,7 @@ export default function MonthlySummary() {
   const [selectedMonthYear, setSelectedMonthYear] = useState(defaultMonthYear);
 
   const { formatCurrency } = useSettings();
+  const { version } = useSocket();
 
   useEffect(() => {
     const fetchTx = async () => {
@@ -27,7 +29,7 @@ export default function MonthlySummary() {
       }
     };
     fetchTx();
-  }, []);
+  }, [version]);
 
   // Compute available months for the dropdown (from oldest transaction to newest)
   const availableMonths = useMemo(() => {

@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { getChartData, getInsightsData, getTransactions } from "../api/transactions";
 import API from "../api/axios";
+import { useSocket } from "../context/SocketContext";
 import {
   PieChart, Pie, Cell,
   BarChart, Bar,
@@ -18,6 +19,7 @@ export default function Charts() {
   const [selectedCategory, setSelectedCategory] = useState(null);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
+  const { version } = useSocket();
 
   useEffect(() => {
     const fetchData = async () => {
@@ -61,7 +63,7 @@ export default function Charts() {
       }
     };
     fetchData();
-  }, []);
+  }, [version]);
 
   const PIE_COLORS = ["#6366f1", "#8b5cf6", "#ec4899", "#f43f5e", "#f97316", "#eab308", "#22c55e"];
 

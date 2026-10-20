@@ -2,12 +2,14 @@ import { useEffect, useState } from "react";
 import { getTransactions } from "../api/transactions";
 import { detectSubscriptions } from "../utils/smartEngine";
 import { useSettings } from "../context/SettingsContext";
+import { useSocket } from "../context/SocketContext";
 import { RefreshCw, TrendingUp, Calendar, AlertCircle } from "lucide-react";
 
 export default function Subscriptions() {
   const [data, setData] = useState({ subscriptions: [], totalMonthlyFixedCost: 0 });
   const [loading, setLoading] = useState(true);
   const { formatCurrency } = useSettings();
+  const { version } = useSocket();
 
   useEffect(() => {
     const fetchData = async () => {
@@ -22,7 +24,7 @@ export default function Subscriptions() {
       }
     };
     fetchData();
-  }, []);
+  }, [version]);
 
   const projectedYearly = data.totalMonthlyFixedCost * 12;
 

@@ -23,6 +23,20 @@ exports.addTransaction = async (req, res) => {
             userId: req.user.id
         });
 
+        // Push the new transaction to every open tab for this user.
+        const io = req.app.get("io");
+        if (io) {
+            io.to(String(req.user.id)).emit("newTransaction", {
+                _id: transaction.id,
+                id: transaction.id,
+                title: transaction.title,
+                amount: transaction.amount,
+                category: transaction.category,
+                type: transaction.type,
+                date: transaction.date
+            });
+        }
+
         res.status(201).json({ message: 'Transaction Added Successfully', transaction });
     } catch (error) {
         res.status(500).json({ message: 'Server Error', error: error.message });

@@ -4,12 +4,14 @@ import { User, Award, CheckCircle2, Lock } from "lucide-react";
 import { useEffect, useState } from "react";
 import { getTransactions } from "../api/transactions";
 import API from "../api/axios";
+import { useSocket } from "../context/SocketContext";
 import { evaluateAchievements } from "../utils/smartEngine";
 
 export default function Profile() {
   const navigate = useNavigate();
   const [achievements, setAchievements] = useState([]);
   const [loading, setLoading] = useState(true);
+  const { version } = useSocket();
 
   useEffect(() => {
     const fetchData = async () => {
@@ -26,7 +28,7 @@ export default function Profile() {
       }
     };
     fetchData();
-  }, []);
+  }, [version]);
 
   return (
     <div className="p-6 md:p-10 transition-colors duration-200">

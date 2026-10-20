@@ -6,21 +6,24 @@ import { SettingsProvider } from "./context/SettingsContext";
 import { ThemeProvider } from "./context/ThemeContext";
 import { SidebarProvider } from "./context/SidebarContext";
 import { SearchProvider } from "./context/SearchContext";
+import { SocketProvider } from "./context/SocketContext";
 import { GoogleOAuthProvider } from '@react-oauth/google';
 import "./index.css";
 
 ReactDOM.createRoot(document.getElementById("root")).render(
   <GoogleOAuthProvider clientId={import.meta.env.VITE_GOOGLE_CLIENT_ID || "YOUR_GOOGLE_CLIENT_ID"}>
     <BrowserRouter>
-      <ThemeProvider>
-        <SettingsProvider>
-          <SidebarProvider>
-            <SearchProvider>
-              <App />
-            </SearchProvider>
-          </SidebarProvider>
-        </SettingsProvider>
-      </ThemeProvider>
+      <SocketProvider>
+        <ThemeProvider>
+          <SettingsProvider>
+            <SidebarProvider>
+              <SearchProvider>
+                <App />
+              </SearchProvider>
+            </SidebarProvider>
+          </SettingsProvider>
+        </ThemeProvider>
+      </SocketProvider>
     </BrowserRouter>
   </GoogleOAuthProvider>
 );

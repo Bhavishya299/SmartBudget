@@ -13,6 +13,7 @@ export default function Sidebar() {
 
   const handleLogout = () => {
     localStorage.clear();
+    window.dispatchEvent(new Event("auth-changed"));
     navigate("/");
   };
 
