@@ -107,8 +107,9 @@ Frontend runs on `http://localhost:5173`, backend on `http://localhost:5000`.
 | `DATABASE_URL` | MySQL URL `mysql://user:pass@host:3306/db` (optional; overrides `DB_*`) |
 | `DB_HOST` / `DB_PORT` / `DB_NAME` / `DB_USER` / `DB_PASSWORD` | Local MySQL connection |
 | `DB_SSL` | `true` for hosted MySQL that requires SSL |
-| `JWT_SECRET` | Long random string for signing tokens |
+| `JWT_SECRET` | Long random string for signing tokens (used by REST auth **and** Socket.IO) |
 | `GOOGLE_CLIENT_ID` | Google OAuth client ID |
+| `CORS_ORIGIN` | Comma-separated browser origins allowed to call the API and open sockets (e.g. `https://your-app.vercel.app`). Leave empty to allow all. |
 | `SMTP_*` | Optional email (password reset) |
 | `WHATSAPP_VERIFY_TOKEN` | Any secret string; must match the value in Meta |
 | `WHATSAPP_TOKEN` | Meta WhatsApp Cloud API access token |

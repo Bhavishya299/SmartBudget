@@ -29,6 +29,10 @@ services:
         value: production
       - key: JWT_SECRET
         generateValue: true
+      # Comma-separated browser origins (e.g. https://your-app.vercel.app).
+      # Leave empty to allow all origins.
+      - key: CORS_ORIGIN
+        sync: false
 
       # --- Auth ---
       - key: GOOGLE_CLIENT_ID

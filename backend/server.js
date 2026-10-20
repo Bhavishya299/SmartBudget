@@ -19,14 +19,42 @@ const whatsappRoutes = require('./routes/whatsappRoutes');
 
 const app = express();
 
+// --- CORS -------------------------------------------------------------------
+// Comma-separated list of browser origins allowed to call the API / open sockets.
+// Leave unset (or "*") to allow every origin — the default, backwards compatible.
+// Production example:
+//   CORS_ORIGIN=https://smartbudget.vercel.app,http://localhost:5173
+// Wildcards are supported, e.g. https://*.vercel.app
+const allowedOrigins = (process.env.CORS_ORIGIN || "")
+    .split(",")
+    .map((origin) => origin.trim())
+    .filter(Boolean);
+
+function isOriginAllowed(origin) {
+    // No Origin header: curl, Meta webhooks, server-to-server calls.
+    if (!origin) return true;
+    if (allowedOrigins.length === 0 || allowedOrigins.includes("*")) return true;
+
+    return allowedOrigins.some((allowed) => {
+        if (allowed === origin) return true;
+        if (!allowed.includes("*")) return false;
+
+        const pattern = allowed
+            .replace(/[.+?^${}()|[\]\\]/g, "\\$&")
+            .replace(/\*/g, ".*");
+        return new RegExp(`^${pattern}$`).test(origin);
+    });
+}
+
+const corsOptions = {
+    origin: (origin, callback) => callback(null, isOriginAllowed(origin)),
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE"],
+};
+
 // 🔥 ADD THIS (create server + socket)
 const server = http.createServer(app);
 const io = new Server(server, {
-    cors: {
-        // Allows the deployed Vercel/Netlify frontend and local dev.
-        origin: "*",
-        methods: ["GET", "POST"]
-    }
+    cors: corsOptions
 });
 
 // Authenticate every socket with the same JWT used by the REST API.
@@ -76,7 +104,7 @@ io.on("connection", (socket) => {
 
 // --- 1. Middlewares ---
 app.use(express.json()); 
-app.use(cors()); 
+app.use(cors(corsOptions)); 
 
 // --- 2. Routes ---
 app.use('/api/users', userRoutes);
