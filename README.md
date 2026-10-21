@@ -137,11 +137,40 @@ Frontend runs on `http://localhost:5173`, backend on `http://localhost:5000`.
 
 Supported message formats:
 ```
-100 shopping
-spent 200 on food
-received 5000 salary
-food 200
+300 on starbucks          → ₹300, Food, title "Starbucks"
+24 on printing            → ₹24, Personal
+30 travel to clg          → ₹30, Transport
+500 uber                  → ₹500, Transport
+1200 rent                 → ₹1200, Housing
+799 netflix               → ₹799, Entertainment
+45000 salary credited     → ₹45000, Salary (income)
+2,500 amazon              → ₹2500, Personal
+100 gpay petrol           → ₹100, Transport (paid online)
+300 starbucks cash        → ₹300, Food (paid in cash)
+250 starbucks yesterday   → ₹250, Food, dated yesterday
 ```
+
+### Smart parsing rules
+
+**Merchants are mapped to real categories** — `starbucks` → Food, `uber` → Transport,
+`netflix` → Entertainment, `printing` → Personal, and so on. Unknown merchants fall
+back to **Other** rather than inventing a category.
+
+**Amounts** accept plain numbers, thousands separators and shorthand:
+`300`, `2,500`, `1k` (1000), `1.5k` (1500), `₹300`. The largest number wins, so
+`spent 300 on 2 coffees` records 300.
+
+**Income vs expense** is detected from words like `salary`, `received`, `credited`,
+`freelance` (income) versus `spent`, `paid`, `bought` (expense). Default is expense.
+
+**Payment method** — mention `cash`, `online`, `upi`, `gpay`, `paytm`, `phonepe`,
+`card`, `netbanking`, etc. and it is stored in the `paymentMethod` column
+(`cash` / `online` / `card`). `upi`, `gpay`, `paytm` and similar all map to
+**online**. Omit it and the value is `unspecified`. Payment words never appear
+in the transaction title.
+
+**Dates** — `today`, `yesterday`, `24 oct`, `24/10/2026`. Anything not recognised
+defaults to today. A past date won't be recorded in the future.
 
 ---
 

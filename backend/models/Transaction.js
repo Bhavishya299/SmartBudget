@@ -26,6 +26,14 @@ const Transaction = sequelize.define(
       defaultValue: "expense",
       validate: { isIn: [["expense", "income"]] },
     },
+    paymentMethod: {
+      // How the money moved. "upi" is folded into "online" so there is a
+      // single value for all digital payments.
+      type: DataTypes.STRING,
+      allowNull: false,
+      defaultValue: "unspecified",
+      validate: { isIn: [["cash", "online", "card", "unspecified"]] },
+    },
     date: {
       type: DataTypes.DATE,
       allowNull: false,

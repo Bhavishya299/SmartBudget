@@ -2,7 +2,7 @@ const Transaction = require("../models/Transaction");
 
 // 1. Add Transaction (Smart & User-Linked)
 exports.addTransaction = async (req, res) => {
-    const { title, amount, category, description, date, type, currency } = req.body;
+    const { title, amount, category, description, date, type, currency, paymentMethod } = req.body;
 
     try {
         if (!title || !category || !description || !date || !amount) {
@@ -12,6 +12,9 @@ exports.addTransaction = async (req, res) => {
             return res.status(400).json({ message: 'Amount must be a positive number!' });
         }
 
+        // "upi" and other digital methods are folded into "online" by the model.
+        const allowedMethods = ["cash", "online", "card", "unspecified"];
+
         const transaction = await Transaction.create({
             title,
             amount,
@@ -20,6 +23,7 @@ exports.addTransaction = async (req, res) => {
             date,
             type,
             currency: currency || "INR",
+            paymentMethod: allowedMethods.includes(paymentMethod) ? paymentMethod : "unspecified",
             userId: req.user.id
         });
 
@@ -33,6 +37,7 @@ exports.addTransaction = async (req, res) => {
                 amount: transaction.amount,
                 category: transaction.category,
                 type: transaction.type,
+                paymentMethod: transaction.paymentMethod,
                 date: transaction.date
             });
         }

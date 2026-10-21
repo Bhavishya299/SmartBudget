@@ -115,6 +115,9 @@ const INCOME_KEYWORDS = [
   "bonus", "credit", "credited", "deposited", "deposit", "refund", "cashback",
   "win", "won", "prize", "reimburse", "reimbursement", "stipend", "dividend",
   "interest", "profit",
+  // Words that are inherently income even without an explicit "received".
+  "freelance", "client", "gig", "consulting", "payout", "settlement",
+  "commission", "royalty", "rent received", "sold", "sale",
 ];
 
 const EXPENSE_KEYWORDS = [
@@ -135,7 +138,27 @@ const STOP_WORDS = new Set([
   "store", "mall", "market", "station", "airport", "campus", "tuition",
   "class", "city", "town", "village", "here", "there", "my", "our", "his",
   "her", "me", "us", "it", "was", "is", "am", "did", "do",
+  // Payment words: detected separately as paymentMethod, so they must not be
+  // repeated in the title.
+  "cash", "cod", "online", "upi", "gpay", "googlepay", "paytm", "phonepe",
+  "card", "creditcard", "debitcard", "netbanking", "netbank", "imps", "neft",
+  "rtgs", "wallet", "cashapp", "bsb", "payment", "paidvia", "mode",
+  "without", "via", "using", "through", "by",
 ]);
+
+/**
+ * Payment method keyword -> canonical value.
+ * "upi", "gpay", "paytm", "phonepe", "netbanking" etc. all collapse to
+ * "online" per the agreed model; "card" stays distinct.
+ */
+const PAYMENT_KEYWORDS = [
+  ["cash", ["cash", "cod", "handcash", "physical"]],
+  ["card", ["card", "creditcard", "debitcard", "visa", "mastercard", "rupay"]],
+  ["online", [
+    "online", "upi", "gpay", "googlepay", "paytm", "phonepe", "netbanking",
+    "netbank", "imps", "neft", "rtgs", "wallet", "amazonpay", "bhim",
+  ]],
+];
 
 const MONTHS = {
   jan: 0, january: 0, feb: 1, february: 1, mar: 2, march: 2, apr: 3, april: 3,
@@ -301,11 +324,24 @@ function detectCategory(tokens) {
   return best;
 }
 
+/** Detect how the payment was made; defaults to "unspecified". */
+function detectPaymentMethod(text) {
+  // Run against the full text rather than the filtered tokens: payment words
+  // are deliberately removed from tokens so they never reach the title.
+  const haystack = ` ${String(text).toLowerCase()} `;
+  for (const [method, keywords] of PAYMENT_KEYWORDS) {
+    for (const kw of keywords) {
+      if (new RegExp(`\\b${kw}\\b`).test(haystack)) return method;
+    }
+  }
+  return "unspecified";
+}
+
 /**
  * Parse a WhatsApp message body.
  *
  * @param {string} raw  message text
- * @returns {{ok: true, amount: number, type: string, category: string, title: string, description: string, date: Date}
+ * @returns {{ok: true, amount: number, type: string, category: string, title: string, description: string, date: Date, paymentMethod: string}
  *          | {ok: false, reason: string}}
  */
 function parseMessage(raw) {
@@ -383,6 +419,7 @@ function parseMessage(raw) {
   if (title.length > 50) title = title.slice(0, 50).trim();
 
   const date = extractDate(cleaned);
+  const paymentMethod = detectPaymentMethod(cleaned);
 
   return {
     ok: true,
@@ -392,6 +429,7 @@ function parseMessage(raw) {
     title: title || titleCase(category),
     description: "WhatsApp entry",
     date,
+    paymentMethod,
   };
 }
 

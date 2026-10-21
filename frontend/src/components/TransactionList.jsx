@@ -77,12 +77,13 @@ export default function TransactionList() {
   const uniqueCategories = [...new Set(transactions.map(t => t.category))];
 
   const exportToCSV = () => {
-    const headers = ["Title", "Category", "Date", "Type", "Amount"];
+    const headers = ["Title", "Category", "Date", "Type", "Payment Method", "Amount"];
     const rows = filteredList.map(t => [
       `"${t.title.replace(/"/g, '""')}"`,
       `"${t.category}"`,
       new Date(t.date).toLocaleDateString(),
       t.type,
+      t.paymentMethod || "unspecified",
       t.amount
     ]);
     const csvContent = "data:text/csv;charset=utf-8," 
@@ -223,6 +224,7 @@ export default function TransactionList() {
                   <tr className="bg-slate-50 dark:bg-slate-800 border-b border-slate-100 dark:border-slate-700 text-xs uppercase tracking-wider text-slate-500 dark:text-slate-400">
                     <th className="p-4 font-medium">Transaction</th>
                     <th className="p-4 font-medium hidden sm:table-cell">Category</th>
+                    <th className="p-4 font-medium hidden lg:table-cell">Method</th>
                     <th className="p-4 font-medium hidden md:table-cell">Date</th>
                     <th className="p-4 font-medium text-right">Amount</th>
                     <th className="p-4 font-medium text-center w-16">Actions</th>
@@ -248,6 +250,15 @@ export default function TransactionList() {
                         <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-300">
                           {t.category}
                         </span>
+                      </td>
+                      <td className="p-4 hidden lg:table-cell">
+                        {t.paymentMethod && t.paymentMethod !== "unspecified" ? (
+                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 capitalize">
+                            {t.paymentMethod}
+                          </span>
+                        ) : (
+                          <span className="text-xs text-slate-400 dark:text-slate-600">—</span>
+                        )}
                       </td>
                       <td className="p-4 text-sm text-slate-500 dark:text-slate-400 hidden md:table-cell">
                         {new Date(t.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}

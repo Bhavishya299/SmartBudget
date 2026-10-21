@@ -123,7 +123,7 @@ Tip: add a date like "yesterday" or "24 oct" to backdate it.`
     return;
   }
 
-  const { amount, category, type, title, description, date } = parsed;
+  const { amount, category, type, title, description, date, paymentMethod } = parsed;
 
   // =============================
   // 💾 SAVE TRANSACTION
@@ -135,6 +135,7 @@ Tip: add a date like "yesterday" or "24 oct" to backdate it.`
     description,
     date,
     type,
+    paymentMethod,
     userId: user.id
   });
 
@@ -151,6 +152,7 @@ Tip: add a date like "yesterday" or "24 oct" to backdate it.`
       amount,
       category,
       type,
+      paymentMethod,
       date: transaction.date
     });
   }
@@ -159,12 +161,16 @@ Tip: add a date like "yesterday" or "24 oct" to backdate it.`
   // 📤 SEND REPLY
   // =============================
   const dateLabel = new Date(date).toDateString();
+  const payLabel = paymentMethod === "unspecified"
+    ? ""
+    : `\n💳 ${paymentMethod === "cash" ? "Cash" : paymentMethod === "card" ? "Card" : "Online"}`;
+
   await sendReply(
     phoneRaw,
     `✅ ${type === "income" ? "Income" : "Expense"} added
 
 ₹${amount} → ${category}
-📝 ${title}
+📝 ${title}${payLabel}
 📅 ${dateLabel}`
   );
 }

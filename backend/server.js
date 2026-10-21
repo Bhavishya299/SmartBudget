@@ -2,7 +2,7 @@ const express = require('express');
 const cors = require('cors');
 const jwt = require('jsonwebtoken');
 require('dotenv').config();
-const { sequelize } = require('./models');
+const { sequelize, Sequelize } = require('./models');
 const { errorHandler } = require('./middleware/errorMiddleware');
 
 // 🔥 ADD THESE 2 LINES
@@ -126,9 +126,31 @@ app.use(errorHandler);
 // --- 4. Database Connection & Server Start ---
 const PORT = process.env.PORT || 5000;
 
+/**
+ * Add columns introduced after the first deploy.
+ *
+ * `sequelize.sync()` only creates missing *tables*; it never adds columns to
+ * an existing one. Rather than `alter: true` (which can rewrite unrelated
+ * tables), we check the live schema and add only what is missing.
+ */
+async function runMigrations() {
+    const qi = sequelize.getQueryInterface();
+
+    const columns = await qi.describeTable("transactions").catch(() => null);
+    if (columns && !columns.paymentMethod) {
+        await qi.addColumn("transactions", "paymentMethod", {
+            type: Sequelize.DataTypes.STRING,
+            allowNull: false,
+            defaultValue: "unspecified",
+        });
+        console.log("🛠️  Added column transactions.paymentMethod");
+    }
+}
+
 sequelize
     .authenticate()
     .then(() => sequelize.sync()) // creates tables if they don't exist yet
+    .then(() => runMigrations())
     .then(() => {
         // 🔥 CHANGE THIS LINE (use server instead of app)
         server.listen(PORT, () => {
