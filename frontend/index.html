@@ -10,6 +10,23 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <title>SmartBudget Pro</title>
+    <script>
+        // Remove any service worker left over from earlier PWA builds.
+        // Previously-installed workers served a cached index.html pointing at
+        // asset filenames that no longer existed after a deploy, which showed a
+        // 404 when refreshing a protected route. Nothing re-registers a worker
+        // now, so this runs once and the problem is gone for good.
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.getRegistrations().then(function (regs) {
+                regs.forEach(function (reg) { reg.unregister(); });
+            });
+            if (window.caches && caches.keys) {
+                caches.keys().then(function (names) {
+                    names.forEach(function (name) { caches.delete(name); });
+                });
+            }
+        }
+    </script>
 </head>
 
 <body>

@@ -8,14 +8,16 @@ export default defineConfig({
   plugins: [
     react(),
     // The service worker caused stale app-shell caching: after each deploy the
-    // old SW kept requesting asset filenames that no longer existed, producing
-    // Vercel 404s until the browser cache was manually cleared.
+    // old SW kept serving a cached index.html that referenced asset filenames
+    // which no longer existed, producing 404s on refresh after sign-in.
     //
-    // `selfDestroying: true` ships a service worker whose only job is to
-    // unregister itself and delete existing caches, so browsers that already
-    // installed an older worker heal themselves on the next visit.
+    // `injectRegister: null` stops vite-plugin-pwa from emitting registerSW.js,
+    // so no new worker is ever installed. The small script in index.html below
+    // actively unregisters any worker a visitor already has and clears its
+    // caches, so affected browsers heal on their next visit.
     VitePWA({
       selfDestroying: true,
+      injectRegister: null,
       registerType: 'autoUpdate',
       manifest: {
         name: 'Budget App',
