@@ -16,6 +16,8 @@ const statsRoutes = require('./routes/statsRoutes');
 const budgetRoutes = require('./routes/budgetRoutes');
 const goalRoutes = require('./routes/goalRoutes');
 const whatsappRoutes = require('./routes/whatsappRoutes');
+const splitRoutes = require('./routes/splitRoutes');
+const uploadRoutes = require('./routes/uploadRoutes');
 
 const app = express();
 
@@ -112,6 +114,8 @@ app.use('/api/v1', transactionRoutes);
 app.use('/api/stats', statsRoutes); 
 app.use('/api/budgets', budgetRoutes);
 app.use('/api/goals', goalRoutes);
+app.use('/api/splits', splitRoutes);
+app.use('/api/upload', uploadRoutes);
 
 // ✅ WhatsApp webhook
 app.use('/webhook', whatsappRoutes);
@@ -152,6 +156,12 @@ sequelize
     .then(() => sequelize.sync()) // creates tables if they don't exist yet
     .then(() => runMigrations())
     .then(() => {
+        try {
+            const { startSplitReminders } = require("./jobs/splitReminders");
+            startSplitReminders();
+        } catch (e) {
+            console.warn("⚠️  Split reminders not started:", e.message);
+        }
         // 🔥 CHANGE THIS LINE (use server instead of app)
         server.listen(PORT, () => {
             console.log(`🚀 Server running on http://localhost:${PORT}`);

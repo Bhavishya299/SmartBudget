@@ -13,6 +13,7 @@ import Goals from "./pages/Goals";
 import Budgets from "./pages/Budgets";
 import MonthlySummary from "./pages/MonthlySummary";
 import Subscriptions from "./pages/Subscriptions";
+import Splits from "./pages/Splits";
 import Layout from "./components/Layout";
 
 function PrivateRoute({ children }) {
@@ -43,6 +44,7 @@ export default function App() {
         <Route path="/settings" element={<Settings />} />
         <Route path="/transactions" element={<TransactionList />} />
         <Route path="/add" element={<AddTransaction />} />
+        <Route path="/splits" element={<Splits />} />
         <Route path="/charts" element={<Charts />} />
         <Route path="/insights" element={<Insights />} />
         <Route path="/profile" element={<Profile />} />

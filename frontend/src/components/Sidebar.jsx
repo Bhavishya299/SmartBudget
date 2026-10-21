@@ -3,7 +3,7 @@ import { useSidebar } from "../context/SidebarContext";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   LayoutDashboard, ArrowRightLeft, PieChart as PieChartIcon, 
-  LineChart, Settings, LogOut, Wallet, Activity, X, CalendarDays, RefreshCw
+  LineChart, Settings, LogOut, Wallet, Activity, X, CalendarDays, RefreshCw, Users
 } from "lucide-react";
 
 export default function Sidebar() {
@@ -22,6 +22,7 @@ export default function Sidebar() {
     { name: "Transactions", path: "/transactions", icon: ArrowRightLeft },
     { name: "Budgets", path: "/budgets", icon: PieChartIcon },
     { name: "Goals", path: "/goals", icon: Wallet },
+    { name: "Split Expenses", path: "/splits", icon: Users },
     { name: "Monthly Summary", path: "/summary", icon: CalendarDays },
     { name: "Subscriptions", path: "/subscriptions", icon: RefreshCw },
     { name: "Analytics", path: "/charts", icon: LineChart }
