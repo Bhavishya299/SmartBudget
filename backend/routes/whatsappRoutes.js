@@ -3,6 +3,7 @@ const router = express.Router();
 const { Op } = require("sequelize");
 const User = require("../models/User");
 const Transaction = require("../models/Transaction");
+const { parseMessage } = require("../utils/whatsappParser");
 const axios = require("axios");
 
 // =============================
@@ -101,75 +102,38 @@ const user = await User.findOne({
 
   // =============================
   // 🔥 SMART PARSER
+  // Delegated to utils/whatsappParser.js so the rules stay testable.
+  // Handles "300 on starbucks" -> Food, "24 on printing" -> Personal, etc.
   // =============================
-  let amount = 0;
-  let category = "general";
-  let type = "expense";
+  const parsed = parseMessage(text);
 
-  const clean = text.replace(/[^a-zA-Z0-9 ]/g, "").trim();
-  const words = clean.split(/\s+/);
-
-  const numMatch = clean.match(/\d+/);
-  if (numMatch) amount = parseInt(numMatch[0]);
-
-  const incomeKeywords = [
-    "salary", "income", "received", "got", "earned", "bonus", "credit", "credited"
-  ];
-
-  const expenseKeywords = [
-    "spent", "pay", "paid", "debit", "buy", "bought"
-  ];
-
-  if (incomeKeywords.some(k => clean.includes(k))) {
-    type = "income";
-  } else if (expenseKeywords.some(k => clean.includes(k))) {
-    type = "expense";
-  } else {
-    type = "expense"; // default
-  }
-
-  const ignoreWords = [
-    "spent", "on", "for", "received", "got", "earned", "paid", "pay", "from"
-  ];
-
-  const possible = words.filter(w => isNaN(w) && !ignoreWords.includes(w));
-
-  if (possible.length > 0) {
-    category = possible[possible.length - 1];
-  }
-
-  // 🔥 fallback: "food 200"
-  if (words.length === 2 && !isNaN(words[1])) {
-    category = words[0];
-    amount = parseInt(words[1]);
-    type = incomeKeywords.includes(words[0]) ? "income" : "expense";
-  }
-
-  // =============================
-  // ❌ INVALID CASE
-  // =============================
-  if (!Number.isSafeInteger(amount) || amount <= 0) {
+  if (!parsed.ok) {
     await sendReply(
       phoneRaw,
-      `❌ Couldn't understand.
+      `❌ Couldn't understand that.
 
-Try:
-💸 Spent 200 on food
-💰 Received 5000 salary
-🍔 food 200`
+Include an amount and what you spent it on, for example:
+💸 300 on starbucks
+💸 spent 24 on printing
+💸 500 uber
+💰 45000 salary credited
+
+Tip: add a date like "yesterday" or "24 oct" to backdate it.`
     );
     return;
   }
+
+  const { amount, category, type, title, description, date } = parsed;
 
   // =============================
   // 💾 SAVE TRANSACTION
   // =============================
   const transaction = await Transaction.create({
-    title: category,
+    title,
     amount,
     category,
-    description: "WhatsApp entry",
-    date: new Date(),
+    description,
+    date,
     type,
     userId: user.id
   });
@@ -182,20 +146,26 @@ Try:
   if (io) {
     io.to(user.id.toString()).emit("newTransaction", {
       _id: transaction.id,
+      id: transaction.id,
+      title,
       amount,
       category,
-      type
+      type,
+      date: transaction.date
     });
   }
 
   // =============================
   // 📤 SEND REPLY
   // =============================
+  const dateLabel = new Date(date).toDateString();
   await sendReply(
     phoneRaw,
     `✅ ${type === "income" ? "Income" : "Expense"} added
 
-₹${amount} → ${category}`
+₹${amount} → ${category}
+📝 ${title}
+📅 ${dateLabel}`
   );
 }
 
