@@ -51,6 +51,9 @@ const CATEGORY_KEYWORDS = [
     "transit", "flight", "airfare", "train", "bus", "metro", "auto",
     "rickshaw", "taxi", "cab", "parking", "toll", "fastag", "irctc", "indigo",
     "railway", "vehicle", "bike", "car",
+    // travel words and common commute phrasing
+    "travel", "commute", "trip", "ride", "ticket", "fare", "pass",
+    "conveyance", "shuttle", "van", "tempo", "ferry", "bmtc", "ksrtc",
   ]],
 
   // ---- Entertainment ----
@@ -126,6 +129,12 @@ const STOP_WORDS = new Set([
   "pay", "debit", "debited", "credit", "credited", "buy", "bought", "purchase",
   "purchased", "bill", "expense", "cost", "charged", "income", "amount", "rs",
   "inr", "rupees", "rupee", "today", "yesterday", "salary",
+  // Places / shorthand that describe where rather than what was bought, so
+  // they shouldn't end up in the transaction title.
+  "clg", "college", "school", "office", "work", "home", "hostel", "shop",
+  "store", "mall", "market", "station", "airport", "campus", "tuition",
+  "class", "city", "town", "village", "here", "there", "my", "our", "his",
+  "her", "me", "us", "it", "was", "is", "am", "did", "do",
 ]);
 
 const MONTHS = {
