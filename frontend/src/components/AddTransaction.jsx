@@ -19,6 +19,7 @@ export default function AddTransaction() {
     category: "",
     date: new Date().toISOString().split('T')[0],
     note: "",
+    paymentMethod: "unspecified",
   });
   const [loading, setLoading] = useState(false);
   const [history, setHistory] = useState([]);
@@ -83,6 +84,7 @@ export default function AddTransaction() {
         date: form.date,
         type,
         currency: currency,
+        paymentMethod: form.paymentMethod,
       });
 
       toast.success("Transaction added!");
@@ -183,6 +185,33 @@ export default function AddTransaction() {
                   </button>
                 ))}
               </div>
+            </div>
+
+            {/* PAYMENT METHOD */}
+            <div>
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-3">Paid With</label>
+              <div className="grid grid-cols-4 gap-2">
+                {[
+                  { id: "unspecified", label: "Other" },
+                  { id: "cash", label: "Cash" },
+                  { id: "online", label: "Online/UPI" },
+                  { id: "card", label: "Card" },
+                ].map((m) => (
+                  <button
+                    key={m.id}
+                    type="button"
+                    onClick={() => setForm({ ...form, paymentMethod: m.id })}
+                    className={`py-2.5 rounded-xl text-sm font-medium border transition-all ${
+                      form.paymentMethod === m.id
+                        ? "border-indigo-500 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-400"
+                        : "border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400"
+                    }`}
+                  >
+                    {m.label}
+                  </button>
+                ))}
+              </div>
+              <p className="text-xs text-slate-400 mt-2">Cash expenses reduce "Cash in Hand", online/card reduce "Bank Balance".</p>
             </div>
 
             {/* NOTE */}

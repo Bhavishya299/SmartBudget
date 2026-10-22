@@ -1,10 +1,117 @@
 const express = require("express");
 const router = express.Router();
 const { Op } = require("sequelize");
-const { Split, SplitShare, Person, Transaction, SplitItem } = require("../models");
+const { Split, SplitShare, Person, SplitGroup, Transaction, SplitItem } = require("../models");
 const { protect } = require("../middleware/authMiddleware");
 const { buildSplit, round2 } = require("../utils/splitMath");
 const { calculateItemWiseSplit } = require("../utils/itemSplit");
+
+/** List all flatmates */
+router.get("/people", protect, async (req, res) => {
+  try {
+    const people = await Person.findAll({
+      where: { userId: req.user.id },
+      order: [["archived", "ASC"], ["name", "ASC"]],
+    });
+    res.json(people);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
+/** Add a flatmate */
+router.post("/people", protect, async (req, res) => {
+  try {
+    const { name, phone, color } = req.body;
+    if (!name || !String(name).trim()) {
+      return res.status(400).json({ message: "Name is required" });
+    }
+    const person = await Person.create({
+      name: String(name).trim(),
+      phone: phone ? String(phone).replace(/\D/g, "") || null : null,
+      color: color || "#6366f1",
+      userId: req.user.id,
+    });
+    res.status(201).json(person);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
+/** Update a flatmate */
+router.put("/people/:id", protect, async (req, res) => {
+  try {
+    const person = await Person.findOne({ where: { id: req.params.id, userId: req.user.id } });
+    if (!person) return res.status(404).json({ message: "Person not found" });
+    const { name, phone, color, archived } = req.body;
+    if (name !== undefined) person.name = String(name).trim();
+    if (phone !== undefined) person.phone = phone ? String(phone).replace(/\D/g, "") || null : null;
+    if (color !== undefined) person.color = color;
+    if (archived !== undefined) person.archived = Boolean(archived);
+    await person.save();
+    res.json(person);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
+/** Delete a flatmate */
+router.delete("/people/:id", protect, async (req, res) => {
+  try {
+    const deleted = await Person.destroy({ where: { id: req.params.id, userId: req.user.id } });
+    if (!deleted) return res.status(404).json({ message: "Person not found" });
+    res.json({ message: "Person deleted" });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
+/** List groups */
+router.get("/groups", protect, async (req, res) => {
+  try {
+    const groups = await SplitGroup.findAll({ where: { userId: req.user.id }, order: [["name", "ASC"]] });
+    res.json(groups);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
+/** Create group */
+router.post("/groups", protect, async (req, res) => {
+  try {
+    const { name, memberIds } = req.body;
+    if (!name || !String(name).trim()) return res.status(400).json({ message: "Name is required" });
+    const group = await SplitGroup.create({ name: String(name).trim(), memberIds: Array.isArray(memberIds) ? memberIds : [], userId: req.user.id });
+    res.status(201).json(group);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
+/** Update group */
+router.put("/groups/:id", protect, async (req, res) => {
+  try {
+    const group = await SplitGroup.findOne({ where: { id: req.params.id, userId: req.user.id } });
+    if (!group) return res.status(404).json({ message: "Group not found" });
+    if (req.body.name !== undefined) group.name = String(req.body.name).trim();
+    if (req.body.memberIds !== undefined) group.memberIds = Array.isArray(req.body.memberIds) ? req.body.memberIds : [];
+    await group.save();
+    res.json(group);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
+/** Delete group */
+router.delete("/groups/:id", protect, async (req, res) => {
+  try {
+    const deleted = await SplitGroup.destroy({ where: { id: req.params.id, userId: req.user.id } });
+    if (!deleted) return res.status(404).json({ message: "Group not found" });
+    res.json({ message: "Group deleted" });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
 
 /** List all splits with their shares and items. */
 router.get("/", protect, async (req, res) => {

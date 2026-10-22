@@ -6,8 +6,9 @@ import API from "../api/axios";
 import { useSettings } from "../context/SettingsContext";
 import { useSearch } from "../context/SearchContext";
 import { useSocket } from "../context/SocketContext";
-import { PlusCircle, TrendingUp, TrendingDown, Wallet, Activity, CalendarClock, HeartPulse } from "lucide-react";
+import { PlusCircle, TrendingUp, TrendingDown, Wallet, Activity, CalendarClock, HeartPulse, Banknote, CreditCard, Edit3, X } from "lucide-react";
 import { computeWeeklyDigest, computeHealthScore } from "../utils/smartEngine";
+import toast from "react-hot-toast";
 
 export default function Dashboard() {
   const navigate = useNavigate();
@@ -25,6 +26,34 @@ export default function Dashboard() {
   const [weeklyDigest, setWeeklyDigest] = useState(null);
   const [healthScore, setHealthScore] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [wallet, setWallet] = useState({ cashBalance: 0, bankBalance: 0 });
+  const [showWalletModal, setShowWalletModal] = useState(false);
+  const [walletForm, setWalletForm] = useState({ cashBalance: "", bankBalance: "" });
+
+  const fetchWallet = async () => {
+    try {
+      const res = await API.get("/api/wallet");
+      setWallet(res.data);
+      setWalletForm({ cashBalance: res.data.cashBalance, bankBalance: res.data.bankBalance });
+    } catch (err) {
+      console.log(err);
+    }
+  };
+
+  const saveWallet = async (e) => {
+    e.preventDefault();
+    try {
+      const res = await API.put("/api/wallet", {
+        cashBalance: Number(walletForm.cashBalance) || 0,
+        bankBalance: Number(walletForm.bankBalance) || 0,
+      });
+      setWallet(res.data);
+      setShowWalletModal(false);
+      toast.success("Wallet updated");
+    } catch (err) {
+      toast.error("Failed to update wallet");
+    }
+  };
 
   useEffect(() => {
     let cancelled = false;
@@ -41,6 +70,7 @@ export default function Dashboard() {
         setStats(statsRes.data);
         setWeeklyDigest(computeWeeklyDigest(txRes.data));
         setHealthScore(computeHealthScore(txRes.data, goalsRes.data));
+        fetchWallet();
       } catch (err) {
         console.log(err);
       } finally {
@@ -78,7 +108,7 @@ export default function Dashboard() {
       </div>
 
       {/* KPI Cards Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-6">
         <motion.div 
           initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
           className="bg-[#111] border border-white/5 p-6 rounded-3xl relative overflow-hidden group"
@@ -87,10 +117,14 @@ export default function Dashboard() {
             <Wallet size={80} />
           </div>
           <div className="relative z-10">
-            <p className="text-slate-400 font-medium text-sm mb-2">Total Balance</p>
-            <h3 className="text-4xl font-bold text-white mb-4 tracking-tight">{formatCurrency(stats.totalBalance)}</h3>
-            <div className="flex items-center gap-2 text-xs text-emerald-400 bg-emerald-500/10 w-fit px-2 py-1 rounded-md">
-              <TrendingUp size={14} /> Stable
+            <div className="flex justify-between items-center mb-2">
+              <p className="text-slate-400 font-medium text-sm">Total Balance</p>
+              <button onClick={() => setShowWalletModal(true)} className="text-slate-500 hover:text-white"><Edit3 size={14} /></button>
+            </div>
+            <h3 className="text-3xl font-bold text-white mb-2 tracking-tight">{formatCurrency(Number(wallet.cashBalance || 0) + Number(wallet.bankBalance || 0))}</h3>
+            <div className="flex items-center gap-3 text-xs">
+              <span className="text-amber-400 flex items-center gap-1"><Banknote size={12} /> Cash: {formatCurrency(wallet.cashBalance || 0)}</span>
+              <span className="text-blue-400 flex items-center gap-1"><CreditCard size={12} /> Bank: {formatCurrency(wallet.bankBalance || 0)}</span>
             </div>
           </div>
         </motion.div>
@@ -237,6 +271,30 @@ export default function Dashboard() {
           </div>
         </motion.div>
       </div>
+
+      {/* WALLET MODAL */}
+      {showWalletModal && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-[#111] border border-white/10 rounded-3xl w-full max-w-md p-6">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-bold text-white">Set Cash & Bank Balance</h2>
+              <button onClick={() => setShowWalletModal(false)}><X size={20} className="text-slate-400" /></button>
+            </div>
+            <form onSubmit={saveWallet} className="space-y-4">
+              <div>
+                <label className="block text-sm text-slate-400 mb-1">Cash in Hand</label>
+                <input type="number" step="0.01" value={walletForm.cashBalance} onChange={(e) => setWalletForm({...walletForm, cashBalance: e.target.value})} className="w-full p-3 rounded-xl bg-white/5 border border-white/10 text-white" />
+              </div>
+              <div>
+                <label className="block text-sm text-slate-400 mb-1">Bank Balance</label>
+                <input type="number" step="0.01" value={walletForm.bankBalance} onChange={(e) => setWalletForm({...walletForm, bankBalance: e.target.value})} className="w-full p-3 rounded-xl bg-white/5 border border-white/10 text-white" />
+              </div>
+              <p className="text-xs text-slate-500">Set your current actual amounts. From now on, adding transactions with Cash/Online will auto-adjust these.</p>
+              <button type="submit" className="w-full py-3 bg-emerald-500 text-white rounded-xl font-medium">Save</button>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

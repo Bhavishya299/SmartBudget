@@ -18,6 +18,7 @@ const goalRoutes = require('./routes/goalRoutes');
 const whatsappRoutes = require('./routes/whatsappRoutes');
 const splitRoutes = require('./routes/splitRoutes');
 const uploadRoutes = require('./routes/uploadRoutes');
+const walletRoutes = require('./routes/walletRoutes');
 
 const app = express();
 
@@ -116,6 +117,7 @@ app.use('/api/budgets', budgetRoutes);
 app.use('/api/goals', goalRoutes);
 app.use('/api/splits', splitRoutes);
 app.use('/api/upload', uploadRoutes);
+app.use('/api/wallet', walletRoutes);
 
 // ✅ WhatsApp webhook
 app.use('/webhook', whatsappRoutes);

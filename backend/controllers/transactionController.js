@@ -1,4 +1,5 @@
 const Transaction = require("../models/Transaction");
+const Wallet = require("../models/Wallet");
 
 // 1. Add Transaction (Smart & User-Linked)
 exports.addTransaction = async (req, res) => {
@@ -14,6 +15,7 @@ exports.addTransaction = async (req, res) => {
 
         // "upi" and other digital methods are folded into "online" by the model.
         const allowedMethods = ["cash", "online", "card", "unspecified"];
+        const pm = allowedMethods.includes(paymentMethod) ? paymentMethod : "unspecified";
 
         const transaction = await Transaction.create({
             title,
@@ -23,9 +25,36 @@ exports.addTransaction = async (req, res) => {
             date,
             type,
             currency: currency || "INR",
-            paymentMethod: allowedMethods.includes(paymentMethod) ? paymentMethod : "unspecified",
+            paymentMethod: pm,
             userId: req.user.id
         });
+
+        // Update wallet balances based on transaction type and payment method
+        try {
+            let wallet = await Wallet.findOne({ where: { userId: req.user.id } });
+            if (!wallet) {
+                wallet = await Wallet.create({ userId: req.user.id, cashBalance: 0, bankBalance: 0 });
+            }
+
+            const amt = Number(amount);
+            if (type === "expense") {
+                if (pm === "cash") {
+                    wallet.cashBalance = Number(wallet.cashBalance) - amt;
+                } else if (pm === "online" || pm === "card") {
+                    wallet.bankBalance = Number(wallet.bankBalance) - amt;
+                }
+                // if unspecified, don't auto-deduct - user can decide
+            } else if (type === "income") {
+                if (pm === "cash") {
+                    wallet.cashBalance = Number(wallet.cashBalance) + amt;
+                } else if (pm === "online" || pm === "card") {
+                    wallet.bankBalance = Number(wallet.bankBalance) + amt;
+                }
+            }
+            await wallet.save();
+        } catch (e) {
+            console.error("Wallet update failed:", e.message);
+        }
 
         // Push the new transaction to every open tab for this user.
         const io = req.app.get("io");
