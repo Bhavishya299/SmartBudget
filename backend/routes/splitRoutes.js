@@ -1,11 +1,12 @@
 const express = require("express");
 const router = express.Router();
 const { Op } = require("sequelize");
-const { Split, SplitShare, Person, Transaction } = require("../models");
+const { Split, SplitShare, Person, Transaction, SplitItem } = require("../models");
 const { protect } = require("../middleware/authMiddleware");
 const { buildSplit, round2 } = require("../utils/splitMath");
+const { calculateItemWiseSplit } = require("../utils/itemSplit");
 
-/** List all splits with their shares. */
+/** List all splits with their shares and items. */
 router.get("/", protect, async (req, res) => {
   try {
     const splits = await Split.findAll({
@@ -14,6 +15,11 @@ router.get("/", protect, async (req, res) => {
         {
           model: SplitShare,
           as: "shares",
+          required: false,
+        },
+        {
+          model: SplitItem,
+          as: "items",
           required: false,
         },
       ],
@@ -84,10 +90,9 @@ router.get("/summary", protect, async (req, res) => {
 
 /** Create a split expense.
  *
- * - Divides the bill evenly across splitCount people (you + others).
- * - Creates a Split row and one SplitShare row per other person.
- * - Optionally creates a Transaction for *your share* so it shows up in your
- *   normal spending (same pattern as a regular expense).
+ * Supports two modes:
+ * - equal: divide whole bill evenly across splitCount people (legacy behavior)
+ * - items: item-wise split where each item can go to all / specific people / just one person
  */
 router.post("/", protect, async (req, res) => {
   try {
@@ -103,6 +108,8 @@ router.post("/", protect, async (req, res) => {
       notes,
       alsoAddToTransactions = true,
       paymentMethod,
+      splitType = "equal", // "equal" | "items"
+      items = [],
     } = req.body;
 
     const total = Number(amount);
@@ -114,20 +121,50 @@ router.post("/", protect, async (req, res) => {
     if (!total || total <= 0) {
       return res.status(400).json({ message: "Amount must be a positive number" });
     }
-    if (parts > 20) {
-      return res.status(400).json({ message: "Split count too large" });
-    }
 
-    const { myShare, shares } = buildSplit({
-      amount: total,
-      splitCount: parts,
-      others: Array.isArray(others) ? others.map((o) => o?.name || o).filter(Boolean) : [],
-    });
+    let myShare, shares, splitCountActual = parts;
+
+    if (splitType === "items" && Array.isArray(items) && items.length > 0) {
+      // Item-wise calculation
+      const othersArr = Array.isArray(others) ? others : [];
+      const peopleForCalc = othersArr.map((o) => ({
+        id: o.personId || o.id || o.name,
+        name: o.name,
+      }));
+
+      const result = calculateItemWiseSplit({
+        items,
+        people: peopleForCalc,
+        userId: req.user.id,
+      });
+
+      myShare = result.myShare;
+      shares = result.shares;
+
+      // For display, splitCount can be 1 + number of people who owe or all people
+      splitCountActual = 1 + (Array.isArray(others) ? others.length : 0) || 1;
+    } else {
+      // Legacy equal split
+      if (parts > 20) {
+        return res.status(400).json({ message: "Split count too large" });
+      }
+      const result = buildSplit({
+        amount: total,
+        splitCount: parts,
+        others: Array.isArray(others) ? others.map((o) => o?.name || o).filter(Boolean) : [],
+      });
+      myShare = result.myShare;
+      shares = result.shares.map((s, idx) => ({
+        ...s,
+        personId: (others[idx] && (others[idx].personId || others[idx].id)) || null,
+      }));
+      splitCountActual = parts;
+    }
 
     let transactionId = null;
 
     // Log your share as a real transaction so it counts in budgets/charts.
-    if (alsoAddToTransactions) {
+    if (alsoAddToTransactions && myShare > 0) {
       const tx = await Transaction.create({
         title: `Split: ${String(title).trim()}`,
         amount: myShare,
@@ -145,7 +182,7 @@ router.post("/", protect, async (req, res) => {
       title: String(title).trim(),
       amount: total,
       myShare,
-      splitCount: parts,
+      splitCount: splitCountActual,
       source,
       category,
       date: date ? new Date(date) : new Date(),
@@ -155,17 +192,32 @@ router.post("/", protect, async (req, res) => {
       userId: req.user.id,
     });
 
+    // Save items if item-wise
+    if (splitType === "items" && Array.isArray(items) && items.length > 0) {
+      const itemRows = items.map((it) => ({
+        name: String(it.name || "").trim(),
+        amount: Number(it.amount || 0),
+        splitMode: it.splitMode || "all",
+        participantIds: it.participantIds || [],
+        paidByOnlyId: it.paidByOnlyId || null,
+        splitId: split.id,
+        userId: req.user.id,
+      }));
+      await SplitItem.bulkCreate(itemRows);
+    }
+
     // Create a share record for each person who owes you.
     const othersArr = Array.isArray(others) ? others : [];
     const shareRows = [];
 
     for (let i = 0; i < shares.length; i++) {
       const s = shares[i];
-      const o = othersArr[i] || {};
+      // Find matching person from othersArr by personId or name
+      const o = othersArr.find((x) => (x.personId === s.personId) || (x.name === s.name)) || {};
       shareRows.push({
         amount: s.amount,
         personName: o.name || s.name,
-        personId: o.personId || null,
+        personId: o.personId || s.personId || null,
         splitId: split.id,
         userId: req.user.id,
         settled: false,
@@ -177,7 +229,10 @@ router.post("/", protect, async (req, res) => {
     }
 
     const created = await Split.findByPk(split.id, {
-      include: [{ model: SplitShare, as: "shares" }],
+      include: [
+        { model: SplitShare, as: "shares" },
+        { model: SplitItem, as: "items" },
+      ],
     });
 
     // Push to UI if possible (matches the pattern used everywhere else).
@@ -188,6 +243,7 @@ router.post("/", protect, async (req, res) => {
 
     res.status(201).json(created);
   } catch (err) {
+    console.error(err);
     res.status(500).json({ message: err.message });
   }
 });

@@ -7,6 +7,7 @@ const Person = require("./Person");
 const SplitGroup = require("./SplitGroup");
 const Split = require("./Split");
 const SplitShare = require("./SplitShare");
+const SplitItem = require("./SplitItem");
 
 // ---- Associations (replaces MongoDB "ref" + populate) ----
 User.hasMany(Transaction, {
@@ -49,6 +50,9 @@ SplitShare.belongsTo(User, { foreignKey: "userId", as: "user" });
 
 SplitShare.belongsTo(Person, { foreignKey: "personId", as: "person" });
 
+Split.hasMany(SplitItem, { foreignKey: "splitId", as: "items", onDelete: "CASCADE" });
+SplitItem.belongsTo(Split, { foreignKey: "splitId", as: "split" });
+
 module.exports = {
   sequelize,
   Sequelize,
@@ -60,4 +64,5 @@ module.exports = {
   SplitGroup,
   Split,
   SplitShare,
+  SplitItem,
 };
