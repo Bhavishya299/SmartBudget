@@ -3,6 +3,7 @@ const router = express.Router();
 const { Op } = require("sequelize");
 const User = require("../models/User");
 const Transaction = require("../models/Transaction");
+const Wallet = require("../models/Wallet");
 const { parseMessage } = require("../utils/whatsappParser");
 const axios = require("axios");
 
@@ -140,6 +141,32 @@ Tip: add a date like "yesterday" or "24 oct" to backdate it.`
   });
 
   console.log("💾 Saved transaction:", transaction.id, "for user", user.id);
+
+  // Update wallet balances based on transaction type and payment method
+  try {
+    let wallet = await Wallet.findOne({ where: { userId: user.id } });
+    if (!wallet) {
+      wallet = await Wallet.create({ userId: user.id, cashBalance: 0, bankBalance: 0 });
+    }
+
+    const amt = Number(amount);
+    if (type === "expense") {
+      if (paymentMethod === "cash") {
+        wallet.cashBalance = Number(wallet.cashBalance) - amt;
+      } else if (paymentMethod === "online" || paymentMethod === "card") {
+        wallet.bankBalance = Number(wallet.bankBalance) - amt;
+      }
+    } else if (type === "income") {
+      if (paymentMethod === "cash") {
+        wallet.cashBalance = Number(wallet.cashBalance) + amt;
+      } else if (paymentMethod === "online" || paymentMethod === "card") {
+        wallet.bankBalance = Number(wallet.bankBalance) + amt;
+      }
+    }
+    await wallet.save();
+  } catch (e) {
+    console.error("Wallet update failed (WhatsApp):", e.message);
+  }
 
   // =============================
   // 🔴 SOCKET UPDATE
